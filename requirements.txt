@@ -6,3 +6,4 @@ uvicorn
 pydantic
 passlib[bcrypt]
 python-jose[cryptography]
+plotly.express
