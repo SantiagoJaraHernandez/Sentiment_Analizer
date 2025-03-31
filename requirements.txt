@@ -1,0 +1,8 @@
+streamlit
+matplotlib
+nltk
+fastapi
+uvicorn
+pydantic
+passlib[bcrypt]
+python-jose[cryptography]
