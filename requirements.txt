@@ -10,3 +10,4 @@ plotly.express
 requests
 pandas
 plotly
+transformers
