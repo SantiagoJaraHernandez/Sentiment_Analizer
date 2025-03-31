@@ -57,7 +57,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 🌍 URL de la API
-API_URL = "sentimentanalizer-production.up.railway.app"
+API_URL = "https://sentimentanalizer-production.up.railway.app/"
 
 # 🔹 Título del Proyecto
 st.markdown("<h1 style='text-align: center;'>🔍 Análisis de Sentimientos en textos con IA</h1>", unsafe_allow_html=True)
