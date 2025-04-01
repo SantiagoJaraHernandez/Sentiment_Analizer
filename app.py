@@ -7,7 +7,7 @@ import plotly.express as px
 st.set_page_config(page_title="Análisis de Sentimientos", page_icon="🧠", layout="wide")
 
 # 🌍 URL de la API
-API_URL = "https://sentimentanalizer-production.up.railway.app/"
+API_URL = "https://sentimentanalizer-.up.railway.app/"
 
 # 🔹 Título del Proyecto
 st.markdown("<h1 style='text-align: center;'>🔍 Análisis de Sentimientos con IA</h1>", unsafe_allow_html=True)
