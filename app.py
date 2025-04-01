@@ -3,64 +3,14 @@ import requests
 import pandas as pd
 import plotly.express as px
 
-# 🔹 Configuración de la página (Título y Favicon)
+# 🔹 Configuración de la página
 st.set_page_config(page_title="Análisis de Sentimientos", page_icon="🧠", layout="wide")
-
-# 🎨 Estilos personalizados (ahora responsive)
-st.markdown("""
-    <style>
-        /* Fondo y estilos generales */
-        body {
-            background-color: #121212;
-            color: white;
-        }
-
-        /* Ajustar tamaño en móviles */
-        @media screen and (max-width: 600px) {
-            .stTextInput input, .stTextArea textarea {
-                font-size: 16px !important;
-                padding: 10px;
-            }
-            .stButton>button {
-                font-size: 18px !important;
-            }
-        }
-
-        /* Botones más grandes y centrados */
-        .stButton>button {
-            width: 100%;
-            border-radius: 5px;
-            padding: 10px;
-            font-size: 16px;
-        }
-
-        /* Inputs oscuros */
-        .stTextInput input, .stTextArea textarea {
-            background-color: #222;
-            color: white;
-            border-radius: 5px;
-        }
-
-        /* Titulos y etiquetas en color blanco */
-        .stTextInput label, .stTextArea label, .stRadio label, .stPassword label {
-            color: #fff;
-            font-weight: bold;
-        }
-
-        /* Ajustar tablas en pantallas pequeñas */
-        .dataframe {
-            width: 100% !important;
-            overflow-x: auto;
-            display: block;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # 🌍 URL de la API
 API_URL = "https://sentimentanalizer-production.up.railway.app/"
 
 # 🔹 Título del Proyecto
-st.markdown("<h1 style='text-align: center;'>🔍 Análisis de Sentimientos en textos con IA</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>🔍 Análisis de Sentimientos con IA</h1>", unsafe_allow_html=True)
 
 # 📌 Variables de sesión
 if "usuario" not in st.session_state:
@@ -73,7 +23,7 @@ if st.session_state.usuario:
     st.subheader(f"Bienvenido, {st.session_state.usuario} 👋")
 
     # 📝 Input para escribir texto
-    st.session_state.texto_usuario = st.text_area("✍️ Escribe tu texto aquí:", 
+    st.session_state.texto_usuario = st.text_area("✍️ Escribe tu texto:", 
                                                   value=st.session_state.texto_usuario, 
                                                   height=150, 
                                                   placeholder="Escribe algo para analizar...")
@@ -81,50 +31,48 @@ if st.session_state.usuario:
     # 🔍 Botón de análisis de sentimiento
     if st.button("🔍 Analizar Sentimiento"):
         if st.session_state.texto_usuario:
-            response = requests.post(f"{API_URL}/analizar/", 
-                                     json={"username": st.session_state.usuario, "texto": st.session_state.texto_usuario})
-
-            if response.status_code == 200:
+            try:
+                response = requests.post(f"{API_URL}/analizar/", 
+                                         json={"username": st.session_state.usuario, "texto": st.session_state.texto_usuario})
+                response.raise_for_status()  # Captura errores HTTP
+                
                 resultado = response.json()
-                with st.container():
-                    st.markdown("<div class='card'>", unsafe_allow_html=True)
-                    st.success("✅ Análisis completado")
-                    st.write(f"**Sentimiento:** {resultado['sentimiento']}")
-                    st.write(f"**Confianza:** {float(resultado['confianza']):.2f} 🔥")
-                    st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.error("⚠️ Error al conectar con la API.")
+                st.success("✅ Análisis completado")
+                st.write(f"**Sentimiento:** {resultado['sentimiento']}")
+                st.write(f"**Confianza:** {float(resultado['confianza']):.2f} 🔥")
+
+            except requests.exceptions.RequestException as e:
+                st.error(f"⚠️ Error al conectar con la API: {e}")
         else:
             st.warning("⚠️ Por favor, ingresa un texto para analizar.")
 
     # 📊 Mostrar historial de análisis
     st.subheader("📊 Historial de Análisis")
 
-    historial_response = requests.get(f"{API_URL}/historial/{st.session_state.usuario}")
-    if historial_response.status_code == 200:
+    try:
+        historial_response = requests.get(f"{API_URL}/historial/{st.session_state.usuario}")
+        historial_response.raise_for_status()
+        
         datos = historial_response.json()
-
         if datos:
             df = pd.DataFrame(datos)
             df["fecha"] = pd.to_datetime(df["fecha"])  # Convertir fecha a formato datetime
+            
+            # Convertir números de sentimiento a texto si es necesario
+            sentimiento_mapeo = {1: "Muy Negativo", 2: "Negativo", 3: "Neutral", 4: "Positivo", 5: "Muy Positivo"}
+            df["sentimiento"] = df["sentimiento"].map(sentimiento_mapeo).fillna(df["sentimiento"])
 
-            # 🟢 Tabla de historial con tarjeta
-            with st.container():
-                st.markdown("<div class='card'>", unsafe_allow_html=True)
-                st.dataframe(df[["fecha", "texto", "sentimiento"]].sort_values(by="fecha", ascending=False))
-                st.markdown("</div>", unsafe_allow_html=True)
+            st.dataframe(df[["fecha", "texto", "sentimiento"]].sort_values(by="fecha", ascending=False))
 
             # 📈 Gráfica de evolución del sentimiento
             fig = px.line(df, x="fecha", y="sentimiento", title="Evolución del Sentimiento", markers=True)
-            fig.update_layout(yaxis=dict(tickmode="array", tickvals=[1, 2, 3, 4, 5], 
-                                         ticktext=["Muy Negativo", "Negativo", "Neutral", "Positivo", "Muy Positivo"]))
             st.plotly_chart(fig)
         else:
             st.info("📌 Aún no has realizado análisis.")
-    else:
-        st.error("⚠️ No se pudo cargar el historial.")
+    except requests.exceptions.RequestException as e:
+        st.error(f"⚠️ No se pudo cargar el historial: {e}")
 
-    # 🔴 Cerrar sesión con botón estilizado
+    # 🔴 Cerrar sesión
     if st.button("🚪 Cerrar Sesión"):
         st.session_state.usuario = None
         st.session_state.texto_usuario = ""  # Limpiar el texto al cerrar sesión
@@ -141,15 +89,16 @@ else:
 
         if st.button("🚀 Iniciar Sesión"):
             if login_username and login_password:
-                response = requests.post(f"{API_URL}/login/", json={"username": login_username, "password": login_password})
-
-                if response.status_code == 200:
+                try:
+                    response = requests.post(f"{API_URL}/login/", json={"username": login_username, "password": login_password})
+                    response.raise_for_status()
+                    
                     st.success("✅ Inicio de sesión exitoso.")
                     st.session_state.usuario = login_username  # Guarda el usuario en la sesión
                     st.session_state.texto_usuario = ""  # Limpiar cualquier texto previo
                     st.rerun()
-                else:
-                    st.error("❌ Usuario o contraseña incorrectos.")
+                except requests.exceptions.RequestException as e:
+                    st.error(f"❌ Usuario o contraseña incorrectos: {e}")
             else:
                 st.warning("⚠️ Por favor, completa todos los campos.")
     
@@ -160,11 +109,12 @@ else:
 
         if st.button("✅ Registrarse"):
             if register_username and register_password:
-                response = requests.post(f"{API_URL}/register/", json={"username": register_username, "password": register_password})
+                try:
+                    response = requests.post(f"{API_URL}/register/", json={"username": register_username, "password": register_password})
+                    response.raise_for_status()
 
-                if response.status_code == 200:
                     st.success("🎉 Usuario registrado correctamente. Ahora puedes iniciar sesión.")
-                else:
-                    st.error("❌ No se pudo registrar el usuario.")
+                except requests.exceptions.RequestException as e:
+                    st.error(f"❌ No se pudo registrar el usuario: {e}")
             else:
                 st.warning("⚠️ Por favor, completa todos los campos.")
