@@ -3,99 +3,93 @@ import requests
 import pandas as pd
 import plotly.express as px
 
-# 🔹 Configuración de la página
+# Configuración de la página (Título y Favicon)
 st.set_page_config(page_title="Análisis de Sentimientos", page_icon="🧠", layout="wide")
 
-# 🌍 URL de la API
+# URL de la API
 API_URL = "https://sentimentanalizer-production.up.railway.app/"
 
-# 🔹 Título del Proyecto
+# Título del Proyecto
 st.markdown("<h1 style='text-align: center;'>🔍 Análisis de Sentimientos con IA</h1>", unsafe_allow_html=True)
 
-# 📌 Variables de sesión
+# Variables de sesión
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
 if "texto_usuario" not in st.session_state:
     st.session_state.texto_usuario = ""
 
-# 🟢 Si el usuario ha iniciado sesión
+# Si el usuario ha iniciado sesión
 if st.session_state.usuario:
     st.subheader(f"Bienvenido, {st.session_state.usuario} 👋")
-
-    # 📝 Input para escribir texto
+    
+    # Input para escribir texto
     st.session_state.texto_usuario = st.text_area("✍️ Escribe tu texto:", 
                                                   value=st.session_state.texto_usuario, 
                                                   height=150, 
                                                   placeholder="Escribe algo para analizar...")
 
-    # 🔍 Botón de análisis de sentimiento
+    # Botón de análisis de sentimiento
     if st.button("🔍 Analizar Sentimiento"):
         if st.session_state.texto_usuario:
             try:
                 response = requests.post(f"{API_URL}/analizar/", 
                                          json={"username": st.session_state.usuario, "texto": st.session_state.texto_usuario})
-                response.raise_for_status()  # Captura errores HTTP
+                response.raise_for_status()  # Capturar errores HTTP
                 
                 resultado = response.json()
                 st.success("✅ Análisis completado")
                 st.write(f"**Sentimiento:** {resultado['sentimiento']}")
                 st.write(f"**Confianza:** {float(resultado['confianza']):.2f} 🔥")
-
             except requests.exceptions.RequestException as e:
                 st.error(f"⚠️ Error al conectar con la API: {e}")
         else:
             st.warning("⚠️ Por favor, ingresa un texto para analizar.")
-
-    # 📊 Mostrar historial de análisis
+    
+    # Mostrar historial de análisis
     st.subheader("📊 Historial de Análisis")
-
     try:
         historial_response = requests.get(f"{API_URL}/historial/{st.session_state.usuario}")
         historial_response.raise_for_status()
-        
         datos = historial_response.json()
         if datos:
             df = pd.DataFrame(datos)
             df["fecha"] = pd.to_datetime(df["fecha"])  # Convertir fecha a formato datetime
-            
-            # Convertir números de sentimiento a texto si es necesario
-            sentimiento_mapeo = {1: "Muy Negativo", 2: "Negativo", 3: "Neutral", 4: "Positivo", 5: "Muy Positivo"}
-            df["sentimiento"] = df["sentimiento"].map(sentimiento_mapeo).fillna(df["sentimiento"])
 
             st.dataframe(df[["fecha", "texto", "sentimiento"]].sort_values(by="fecha", ascending=False))
 
-            # 📈 Gráfica de evolución del sentimiento
-            fig = px.line(df, x="fecha", y="sentimiento", title="Evolución del Sentimiento", markers=True)
+            # Gráfica de evolución de la confianza
+            fig = px.line(df, x="fecha", y="confianza", title="Evolución de la Confianza en el Sentimiento", markers=True)
             st.plotly_chart(fig)
         else:
             st.info("📌 Aún no has realizado análisis.")
     except requests.exceptions.RequestException as e:
         st.error(f"⚠️ No se pudo cargar el historial: {e}")
-
-    # 🔴 Cerrar sesión
+    
+    # Cerrar sesión
     if st.button("🚪 Cerrar Sesión"):
         st.session_state.usuario = None
-        st.session_state.texto_usuario = ""  # Limpiar el texto al cerrar sesión
+        st.session_state.texto_usuario = ""
         st.rerun()
 
-# 🔹 Si no ha iniciado sesión, mostrar opciones de inicio/registro
+# Si no ha iniciado sesión, mostrar opciones de inicio/registro
 else:
     opcion = st.radio("📌 ¿Qué deseas hacer?", ["Iniciar Sesión", "Registrarse"], index=0)
-
+    
     if opcion == "Iniciar Sesión":
         st.subheader("🔐 Iniciar Sesión")
         login_username = st.text_input("👤 Nombre de usuario")
         login_password = st.text_input("🔑 Contraseña", type="password")
-
+        
         if st.button("🚀 Iniciar Sesión"):
             if login_username and login_password:
                 try:
-                    response = requests.post(f"{API_URL}/login/", json={"username": login_username, "password": login_password})
+                    response = requests.post(f"{API_URL}/login/", 
+                                             json={"username": login_username, "password": login_password})
                     response.raise_for_status()
                     
                     st.success("✅ Inicio de sesión exitoso.")
-                    st.session_state.usuario = login_username  # Guarda el usuario en la sesión
-                    st.session_state.texto_usuario = ""  # Limpiar cualquier texto previo
+                    st.session_state.usuario = login_username
+                    st.session_state.texto_usuario = ""
                     st.rerun()
                 except requests.exceptions.RequestException as e:
                     st.error(f"❌ Usuario o contraseña incorrectos: {e}")
@@ -106,13 +100,14 @@ else:
         st.subheader("📌 Crear una nueva cuenta")
         register_username = st.text_input("👤 Nombre de usuario")
         register_password = st.text_input("🔑 Contraseña", type="password")
-
+        
         if st.button("✅ Registrarse"):
             if register_username and register_password:
                 try:
-                    response = requests.post(f"{API_URL}/register/", json={"username": register_username, "password": register_password})
+                    response = requests.post(f"{API_URL}/register/", 
+                                             json={"username": register_username, "password": register_password})
                     response.raise_for_status()
-
+                    
                     st.success("🎉 Usuario registrado correctamente. Ahora puedes iniciar sesión.")
                 except requests.exceptions.RequestException as e:
                     st.error(f"❌ No se pudo registrar el usuario: {e}")
