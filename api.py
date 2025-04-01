@@ -8,7 +8,6 @@ from sentiment_analysis import analizar_sentimiento
 app = FastAPI()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Modelos de datos
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -21,7 +20,6 @@ class TextoEntrada(BaseModel):
     username: str
     texto: str
 
-# Función para manejar la conexión a la base de datos
 def get_db():
     conn = sqlite3.connect("database.db", check_same_thread=False)
     try:
@@ -29,7 +27,6 @@ def get_db():
     finally:
         conn.close()
 
-# Inicializar la base de datos y crear tablas si no existen
 def init_db():
     with sqlite3.connect("database.db", check_same_thread=False) as conn:
         cursor = conn.cursor()
@@ -54,21 +51,17 @@ def init_db():
 
 init_db()
 
-# Registro de Usuario
 @app.post("/register/")
 def register(user: UserCreate, db=Depends(get_db)):
     cursor = db.cursor()
     cursor.execute("SELECT * FROM users WHERE username = ?", (user.username,))
     if cursor.fetchone():
         raise HTTPException(status_code=400, detail="El usuario ya existe")
-    
     hashed_password = pwd_context.hash(user.password)
     cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (user.username, hashed_password))
     db.commit()
-    
     return {"message": "Usuario creado exitosamente"}
 
-# Inicio de Sesión
 @app.post("/login/")
 def login(user: UserLogin, db=Depends(get_db)):
     cursor = db.cursor()
@@ -78,7 +71,6 @@ def login(user: UserLogin, db=Depends(get_db)):
         raise HTTPException(status_code=400, detail="Usuario o contraseña incorrectos")
     return {"message": "Inicio de sesión exitoso"}
 
-# Analizar Sentimiento y Guardarlo en Historial (análisis síncrono)
 @app.post("/analizar/")
 def analizar_sentimiento_api(entrada: TextoEntrada, db=Depends(get_db)):
     resultado = analizar_sentimiento(entrada.texto)
@@ -91,7 +83,6 @@ def analizar_sentimiento_api(entrada: TextoEntrada, db=Depends(get_db)):
     db.commit()
     return resultado
 
-# Obtener Historial de un Usuario
 @app.get("/historial/{username}")
 def obtener_historial(username: str, db=Depends(get_db)):
     cursor = db.cursor()
